@@ -53,6 +53,7 @@ def mainth():
          body = {"password":str(password)+"!","email":str(username)+"@xojxe.com","name":str(nameOfAcc),"udid":udid,"referralCode":str(refferalCode)}
          r = scraper.post('https://api.legionnetwork.io/api1/user/create', json = body)
 
+
          if r.status_code == 200:
             logger.info(f"Начало регистрации для {username}")
 

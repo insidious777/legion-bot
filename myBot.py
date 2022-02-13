@@ -24,24 +24,27 @@ logger.add(stderr, format="<white>{time:HH:mm:ss}</white> | <level>{level: <8}</
 
 refferalCode = str(input('Введите ваш реферальный код: '))
 threads = int(input('Количество потоков: '))
-use_proxy = str(input('Использовать Proxy? (y/N): '))
+use_proxy = str(input('Использовать прокси? (y/N): '))
 if use_proxy in ('y', 'Y'):
    proxy_type = str(input('Укажите тип прокси (http/https/socks4/socks5): '))
    proxy_folder = str(input('Перетяните TXT файл с прокси, формат: (ip:port or user:pass@ip:port): '))
-
-def take_proxy():
+use_proxy_thread_number = str(input('Брать прокси по номеру потока? (y/N): '))
+def take_proxy(thread_number):
    with open(proxy_folder) as file:
       lines = file.readlines()
-      proxy_str = choice(lines)
+      if use_proxy_thread_number in ('y', 'Y'):
+         proxy_str = lines[thread_number].strip()
+      else:
+         proxy_str = choice(lines)
    return proxy_str
 
-def mainth():
+def mainth(thread_number):
    while True:
       try:
          udid = str(uuid4())
          scraper = cloudscraper.create_scraper()
          if use_proxy in ('y', 'Y'):
-            proxy_str = take_proxy()
+            proxy_str = take_proxy(thread_number)
             scraper.proxies.update({'http': f'{proxy_type}://{proxy_str}', 'https': f'{proxy_type}://{proxy_str}'})
          scraper.headers.update({'Content-Type': 'application/json', 'cf-visitor': 'https', 'User-Agent': 'Legion/5.2 CFNetwork/1209 Darwin/20.2.0', 'Connection': 'keep-alive', 'Accept': 'application/json, text/plain, */*', 'Accept-Language': 'ru', 'x-forwarded-proto': 'https', 'Accept-Encoding': 'gzip, deflate, br'})
 
@@ -50,7 +53,6 @@ def mainth():
          password = str(randint(0,9))+''.join([choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' if i != 25 else 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for i in range(25)])
          body = {"password":str(password)+"!","email":str(username)+"@xojxe.com","name":str(nameOfAcc),"udid":udid,"referralCode":str(refferalCode)}
          r = scraper.post('https://api.legionnetwork.io/api1/user/create', json = body)
-
          if r.status_code == 200:
             logger.info(f"Начало регистрации для {username}")
 
@@ -66,7 +68,7 @@ def mainth():
                   break
                else:
                   if i == 12:
-                     logger.error(f'Письмо для {username} не получено')
+                     logger.error(f'Письмо для {username} не получено | Thead number: {thread_number}|')
                      raise Exception('email_timeout')
                   else:
                      sleep(30)
@@ -87,13 +89,13 @@ def mainth():
                elif i == 29:
                   raise Exception('token_timeout')
          else:
-            raise Exception('wrong_code')
+            raise Exception(f'wrong_code | Thead number: {thread_number}| code: {r.status_code}|')
       except Exception as error:
          if str(error) == 'email_timeout':
             logger.error(f'Error: email timeout')
          elif str(error) == 'wrong_code':
             if 'used Cloudflare to restrict access' in str(r.text) or r.status_code == 504:
-               logger.error('CloudFlare')
+               logger.error(f'CloudFlare | Thead number: {thread_number}|')
             else:
                logger.error(f'Error: wrong code - {str(r.status_code)}')
          elif str(error) == 'token_timeout':
@@ -103,7 +105,7 @@ def mainth():
       else:
          with open('LegionAccounts.txt', 'a', encoding='utf-8') as file:
             file.write(f'{str(password)}!:{str(username)}@xojxe.com:{str(nameOfAcc)}:{udid}\n')
-         logger.success(f'Аккаунт {username} успшено зарегистрирован')
+         logger.debug(f'Аккаунт {username} успшено зарегистрирован | Thead number: {thread_number}|')
 
 def cleaner():
    while True:
@@ -112,7 +114,7 @@ def cleaner():
       collect()
 
 clear()
-for _ in range(threads):
-   Thread(target=mainth).start()
+for i in range(10):
+   Thread(target=mainth, args=(i,)).start()
 
 Thread(target=cleaner, daemon=True).start()
