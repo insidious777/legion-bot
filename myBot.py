@@ -29,6 +29,7 @@ if use_proxy in ('y', 'Y'):
    proxy_type = str(input('Укажите тип прокси (http/https/socks4/socks5): '))
    proxy_folder = str(input('Перетяните TXT файл с прокси, формат: (ip:port or user:pass@ip:port): '))
 use_proxy_thread_number = str(input('Брать прокси по номеру потока? (y/N): '))
+post_domain = str(input('Введите домен почты: | 1secmail.com | 1secmail.org | 1secmail.net | wwjmp.com | esiix.com | xojxe.com | yoggm.com: '))
 def take_proxy(thread_number):
    with open(proxy_folder) as file:
       lines = file.readlines()
@@ -39,6 +40,7 @@ def take_proxy(thread_number):
    return proxy_str
 
 def mainth(thread_number):
+   print(post_domain)
    while True:
       try:
          udid = str(uuid4())
@@ -51,18 +53,19 @@ def mainth(thread_number):
          username = generate_username()[0]+''.join([choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' if i != 5 else 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for i in range(5)])
          nameOfAcc = get_first_name()
          password = str(randint(0,9))+''.join([choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' if i != 25 else 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for i in range(25)])
-         body = {"password":str(password)+"!","email":str(username)+"@xojxe.com","name":str(nameOfAcc),"udid":udid,"referralCode":str(refferalCode)}
+         body = {"password":str(password)+"!","email":str(username)+'@'+post_domain,"name":str(nameOfAcc),"udid":udid,"referralCode":str(refferalCode)}
+         print(body)
          r = scraper.post('https://api.legionnetwork.io/api1/user/create', json = body)
          if r.status_code == 200:
             logger.info(f"Начало регистрации для {username}")
 
             logger.info(f'Ожидаю письмо для {username}')
             for i in range(100):
-               r = get(f"https://www.1secmail.com/api/v1/?action=getMessages&login={username}&domain=xojxe.com")
+               r = get(f"https://www.1secmail.com/api/v1/?action=getMessages&login={username}&domain={post_domain}")
                r_json = r.json()
                if len(r_json) > 0:
                   latest_mail = r_json[0].get('id')
-                  req = get(f"https://www.1secmail.com/mailbox/?action=mailBody&id={latest_mail}&login={username}&domain=xojxe.com")
+                  req = get(f"https://www.1secmail.com/mailbox/?action=mailBody&id={latest_mail}&login={username}&domain={post_domain}")
                   urlVerify = BeautifulSoup(req.text,'html').find_all("a", href=True)[1].get("href")
                   logger.success(f'Письмо для {username} успешно получено')
                   break
@@ -104,7 +107,7 @@ def mainth(thread_number):
             logger.error(f'Unexpected error: {str(error)}')
       else:
          with open('LegionAccounts.txt', 'a', encoding='utf-8') as file:
-            file.write(f'{str(password)}!:{str(username)}@xojxe.com:{str(nameOfAcc)}:{udid}\n')
+            file.write(f'{str(password)}!:{str(username)}@{post_domain}:{str(nameOfAcc)}:{udid}\n')
          logger.debug(f'Аккаунт {username} успшено зарегистрирован | Thead number: {thread_number}|')
 
 def cleaner():
